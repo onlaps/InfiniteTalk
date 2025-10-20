@@ -31,6 +31,12 @@ WAN_DIR="${WAN_DIR:-${WEIGHTS_DIR}/Wan2.1-I2V-14B-480P}"
 W2V2_DIR="${W2V2_DIR:-${WEIGHTS_DIR}/chinese-wav2vec2-base}"
 IT_DIR="${IT_DIR:-${WEIGHTS_DIR}/InfiniteTalk}"
 
+# NEW: FusionX LoRA target dir & filename
+FUSIONX_DIR="${FUSIONX_DIR:-${WEIGHTS_DIR}/Wan_FusionX_LoRA}"
+FUSIONX_FILE="${FUSIONX_FILE:-Wan2.1_I2V_14B_FusionX_LoRA.safetensors}"
+FUSIONX_REPO="${FUSIONX_REPO:-vrgamedevgirl84/Wan14BT2VFusioniX}"
+FUSIONX_PATH_IN_REPO="${FUSIONX_PATH_IN_REPO:-FusionX_LoRa/${FUSIONX_FILE}}"
+
 SKIP_WEIGHTS="${SKIP_WEIGHTS:-0}"
 SKIP_HF_LOGIN="${SKIP_HF_LOGIN:-0}"
 
@@ -126,7 +132,7 @@ PY
 
 download_models() {
   echo "Downloading models to ${WEIGHTS_DIR} (cache at ${HF_HUB_CACHE})"
-  mkdir -p "${WAN_DIR}" "${W2V2_DIR}" "${IT_DIR}"
+  mkdir -p "${WAN_DIR}" "${W2V2_DIR}" "${IT_DIR}" "${FUSIONX_DIR}"
 
   # Whole repos
   hf_run download Wan-AI/Wan2.1-I2V-14B-480P --local-dir "${WAN_DIR}"
@@ -139,6 +145,22 @@ download_models() {
     --local-dir "${W2V2_DIR}"
 
   hf_run download MeiGen-AI/InfiniteTalk --local-dir "${IT_DIR}"
+
+  # --- NEW: FusionX LoRA file from Hugging Face ---
+  # Source: https://huggingface.co/vrgamedevgirl84/Wan14BT2VFusioniX/blob/main/FusionX_LoRa/Wan2.1_I2V_14B_FusionX_LoRA.safetensors
+  echo "Downloading FusionX LoRA (${FUSIONX_FILE}) to ${FUSIONX_DIR}"
+  hf_run download "${FUSIONX_REPO}" \
+    --include "${FUSIONX_PATH_IN_REPO}" \
+    --local-dir "${FUSIONX_DIR}"
+
+  # Optional: make a convenient symlink into the Wan weights tree
+  mkdir -p "${WAN_DIR}/loras"
+  if [[ -f "${FUSIONX_DIR}/${FUSIONX_PATH_IN_REPO}" ]]; then
+    ln -sf "${FUSIONX_DIR}/${FUSIONX_PATH_IN_REPO}" "${WAN_DIR}/loras/${FUSIONX_FILE}"
+    echo "Symlinked LoRA => ${WAN_DIR}/loras/${FUSIONX_FILE}"
+  else
+    echo "Warning: expected LoRA file not found at ${FUSIONX_DIR}/${FUSIONX_PATH_IN_REPO}"
+  fi
 }
 
 main() {
@@ -162,4 +184,5 @@ main() {
   echo "Activate in a new shell with:"
   echo "  source ${MINIFORGE_PREFIX}/etc/profile.d/conda.sh && conda activate ${ENV_PREFIX}"
 }
+
 main "$@"
